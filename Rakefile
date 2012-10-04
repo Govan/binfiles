@@ -8,7 +8,7 @@ task :install do
   FileUtils.mkdir_p(File.expand_path("~/bin"))
   Dir['*'].each do |file|
     file = File.expand_path file
-    next if %w[Rakefile README.rdoc LICENSE .git].include? file
+    next if %w[Rakefile README.rdoc LICENSE .git].include? File.basename(file)
 
     original_file = File.join(ENV['HOME'], "bin", "#{File.basename(file)}")
     if File.exist?(original_file)
