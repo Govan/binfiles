@@ -1,0 +1,6 @@
+if [ -z "$1" ] ; then
+    echo "pd <args> - run <args> and then send a message via Prowl letting me know that the job has finished"
+    exit 0;
+fi
+eval $@;
+prowl "Finished - ${@}";
