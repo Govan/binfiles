@@ -1,51 +1,49 @@
 require 'rake'
 require 'erb'
-require 'fileutils'
 
-desc "install the dot files into user's home directory"
+desc "install the bin directory into user's home directory"
 task :install do
-  replace_all = false
   FileUtils.mkdir_p(File.expand_path("~/bin"))
+  replace_all = !!ENV["FORCE"]
   Dir['*'].each do |file|
-    file = File.expand_path file
-    next if %w[Rakefile README.rdoc LICENSE .git].include? File.basename(file)
+    next if %w[Rakefile README README.rdoc LICENSE].include? file
 
-    original_file = File.join(ENV['HOME'], "bin", "#{File.basename(file)}")
-    if File.exist?(original_file)
-      if File.identical?(original_file, file) && !File.directory?(file)
-        puts "identical #{original_file}"
-      elsif replace_all
-        replace_file(original_file, file)
+    if File.exist?(File.join(ENV['HOME'], ".#{file.sub('.erb', '')}"))
+      if replace_all
+        replace_file(file)
       else
-        print "overwrite #{original_file}? [ynaq] "
+        print "overwrite ~/.#{file.sub('.erb', '')}? [ynaq] "
         case $stdin.gets.chomp
         when 'a'
           replace_all = true
-          replace_file(original_file, file)
+          replace_file(file)
         when 'y'
-          replace_file(original_file, file)
+          replace_file(file)
         when 'q'
           exit
         else
-          puts "skipping #{original_file}"
+          puts "skipping ~/.#{file.sub('.erb', '')}"
         end
       end
     else
-      link_file(original_file, file)
+      link_file(file)
     end
   end
 end
 
-def replace_file(original_file, new_file)
-  command = %Q{rm -rf "#{original_file}"}
-  puts command
-  system command
-  link_file(original_file, new_file)
+def replace_file(file)
+  system %Q{rm -rf "$HOME/.#{file.sub('.erb', '')}"}
+  link_file(file)
 end
 
-def link_file(original_file, new_file)
-  command = %Q{ln -fs "#{new_file}" "#{original_file}"}
-  puts command
-  system command
+def link_file(file)
+  if file =~ /.erb$/
+    puts "generating ~/.#{file.sub('.erb', '')}"
+    File.open(File.join(ENV['HOME'], ".#{file.sub('.erb', '')}"), 'w') do |new_file|
+      new_file.write ERB.new(File.read(file)).result(binding)
+    end
+  else
+    puts "linking ~/.#{file}"
+    system %Q{ln -s "$PWD/#{file}" "$HOME/.#{file}"}
+  end
 end
-
