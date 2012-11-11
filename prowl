@@ -1,105 +1,134 @@
-#!/bin/sh
+#!/usr/bin/env ruby
 
-usage()
-{
-  echo "
-Usage: prowl.sh [-vr] [-s Subject] [-a Application] message
-Try 'prowl.sh -h' for more information."
-  exit 1
-}
+###################################
+# To get round having issues with Gem paths
+# and whatnot on new systems, just include the 
+# source of the ruby-prowl gem
+# https://github.com/augustl/ruby-prowl
+####################################
+require 'cgi'
+require 'net/https'
+require 'uri'
 
-help()
-{
-  echo "
-Usage: prowl.sh [-vr] [-s Subject] [-a Application] message
 
-Options:
-  -s SUBJECT (Required)
-    The subject line of the message that is being sent
-  -a APPLICATION (Required)
-    The application the message is coming from
-  -v
-    Displays a success or failure message after receiving response using XPath if XPath is available
-  -r
-    Displays the raw XML output response from Prowl
-  -h
-    Shows this help text"
-  exit 1
-}
+class Prowl
+  class MissingAPIKey < RuntimeError; end
+  class TooManyAPIKeys < RuntimeError; end
+  class PriorityOutOfRange < RuntimeError; end
 
-#set the API key from the environment variable
-if [ ! -z $PROWL_APIKEY ]; then
-  API_KEY=$PROWL_APIKEY
-else
-  echo "Prowl API Key not set as an environment variable. Add \"export PROWL_APIKEY={key}\" to your .bash_profile or .profile"
-  exit 1
-fi
+  API_URL = "https://prowl.weks.net:443/publicapi"
+  MAX_API_KEYS = 5
+  PRIORITY_RANGE = -2..2
 
-#Set defaults
-verbose=0
-raw=0
+  def initialize(defaults = {})
+    @defaults = defaults
+  end
 
-#TODO: Add support for priority
-# process options
-while getopts s:a:vrh o
-do  case "$o" in
-  s) SUBJECT=$OPTARG;;
-  a) APPLICATION=$OPTARG;;
-  v) verbose=1;;
-  r) raw=1;;
-  h) help;;
-[?]) usage;;
-  esac
-done
-# shift the option values out
-shift $(($OPTIND - 1))
+  def add(params = {})
+    perform("add", params)
+  end
 
-#use everything but the options as the message to send
-MESSAGE=$*
+  # Modify this instance's defaults
+  def defaults(params)
+    @defaults = @defaults.merge(params)
+  end
 
-if [ -z "$APPLICATION" ]; then
-  APPLICATION=`hostname`+":";
-fi
+  def valid?
+    @valid ||= (perform("verify") == 200)
+  end
 
-if [ -z "$SUBJECT" ]; then
-  SUBJECT="";
-fi
+  # Utility function that creates an instance and sends a prowl
+  def self.add(params = {})
+    new(params).add
+  end
 
-#Ensure that a message was provided after argument parsing
-if [ -z "$MESSAGE" ]; then
-  echo "No message was provided to send."
-  usage
-  exit 1
-fi
+  # Utility function to verify API keys
+  def self.verify(apikey)
+    new({:apikey => apikey}).valid?
+  end
 
-# Send off the message to prowl
-call=`curl -s -d "apikey=$API_KEY&application=$APPLICATION&event=$SUBJECT&description=$MESSAGE" https://api.prowlapp.com/publicapi/add`
+  private
 
-exit 0;
+  def perform(action, params = {})
+    # Merge the default params with any custom ones
+    unless !@defaults
+      params = @defaults.merge(params)
+    end
 
-#below here does not play nicely with zsh on remotebaby
+    if !params[:apikey] || (params[:apikey].is_a?(Array) && params[:apikey].size < 1)
+      raise MissingAPIKey
+    end
 
-# Display raw output for debugging
-if [ $raw == "1" ]; then
-  echo $call
-fi
+    # Raise an exception if we're trying to use more API keys than allowed for this action
+    if params[:apikey].is_a?(Array) && ((action == "verify" && params[:apikey].size > 1) || params[:apikey].size > MAX_API_KEYS)
+      raise TooManyAPIKeys
+    end
 
-# If verbose is set to true, then use xpath to process the response
-if [ $verbose == "1" ]; then
-  #Only process if xpath is installed
-  xpath=`command -v xpath`
-  if [ ! -z $xpath ]; then
-    #since this script is only for sending a message, we can assume the finding of a success code means it worke
-    success=`echo $call | xpath //success/@code=200 2>/dev/null`
-    if [ $success == "1" ]; then
-      echo "Message sent successfully"
-      exit 0
-    else
-      #FIXME: Display the error code and response text
-      echo "Message sending failed"
-      exit 1
-    fi
-  else
-    echo "Verbose output aborted. Xpath is required to process response."
-  fi
-fi
+    if params[:priority] && !PRIORITY_RANGE.include?(params[:priority])
+      raise PriorityOutOfRange
+    end
+
+    # If there are multiple API Keys in an array, merge them into a comma-delimited string
+    if params[:apikey].is_a?(Array)
+      params[:apikey] = params[:apikey].join(",")
+    end
+
+    uri = URI.parse("#{API_URL}/#{action}")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Get.new(uri.request_uri + "?" + params.map {|k, v| "#{k}=#{CGI.escape(v.to_s)}"}.join("&"))
+    response = http.request(request)
+    return response.code.to_i
+  end
+end
+
+###################################
+require 'optparse'
+require 'yaml'
+
+
+application = "prowl"
+message_options = {:description=>"", :event=>""}
+devices = YAML.load_file(File.expand_path('~/.prowl.yml'))
+target_devices = devices.values # Default to sending to all devices
+
+opt_parser = OptionParser.new do |opt|
+  opt.banner = "Usage: prowl-ruby.rb MESSAGE [EVENT_LABEL] [OPTIONS]"
+  opt.banner << "Device names and api-keys are read from ~/.prowl.yml"
+  opt.banner << "\n./prowl-ruby.rb 'the import has finished' one.example.com -a mysql -t iphone"
+  opt.separator  "Options"
+
+  opt.on("-a","--as APPLICATION_NAME"," application name to pass to growl") do |application_name|
+    application = application_name
+  end
+
+  opt.on("-t","--to DEVICE_NAME"," device to target - defaults to all devices") do |device_name|
+    apikey = devices[device_name.to_s.downcase].to_s
+    target_devices = [apikey]
+    if target_devices.first.empty?
+      puts "You need to supply a target device (#{devices.keys.join(', ')}) or none at all."
+      exit
+    end
+  end
+
+  opt.on( '-h', '--help', 'Display this screen' ) do
+    puts opt
+    exit
+  end
+end
+
+opt_parser.parse!
+
+
+message_options[:description] = ARGV[0].to_s
+message_options[:event] = ARGV[1].to_s
+
+
+target_devices.each do |target_device|
+  p = Prowl.new(:apikey => target_device, 
+                :application => application)
+  p.add(message_options)
+end
+
