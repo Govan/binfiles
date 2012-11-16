@@ -4,5 +4,6 @@ rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Audiobooks/*
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Music/* /Volumes/Meeja/Backed\ up/Music
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Podcasts/* /Volumes/Meeja/Backed\ up/Podcasts
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Movies/* /Volumes/Meeja/Backed\ up/Movies
+rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/TV\ Shows/* /Volumes/Meeja/Backed\ up/TV\ Shows
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Books/* /Volumes/Meeja/Backed\ up/Books
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Mobile\ Applications/* /Volumes/Meeja/Backed\ up/Mobile\ Applications
