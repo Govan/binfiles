@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+#
+# Quit programs that shouldn't be running when I'm AFK
+# You'll want to link this to a launchctl plist in ~/Library/LaunchAgents
+
+module Launchctl
+  def self.plist
+   output=<<EOF  
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.co.leftbrained.idlr</string>
+    <key>OnDemand</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>UserName</key>
+    <string>#{ENV["USER"]}</string>
+    <key>Program</key>
+    <string>#{__FILE__}</string>
+    <key>ProgramArguments</key>
+    <array>
+    </array>
+    <key>StartInterval</key>
+    <integer>60</integer>
+</dict>
+</plist> 
+EOF
+  end
+end
+
+module SystemState
+  def self.idle_time
+    dump = `ioreg -c IOHIDSystem`
+    hid_idle_time = dump.match(/"HIDIdleTime" = ([0-9]+)/)[1]
+    hid_idle_time.to_i / 1000000000
+  end
+
+  def self.screensaver_suppressed?
+    dump = `pmset -g`
+    !!dump.match(/sleep\s+10 \(sleep prevented/)
+  end
+end
+
+module Application
+  def self.quit(application)
+    `osascript -e 'tell application "#{application}" to quit'`
+  end
+end
+
+if SystemState.idle_time > 600
+  Application.quit("Adium") 
+  Application.quit("Tweetbot") 
+  Application.quit("Billings")
+  Application.quit("LittleSnapper")
+  Application.quit("iTunes") unless SystemState.screensaver_suppressed?
+end
