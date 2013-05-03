@@ -50,7 +50,9 @@ module Application
   end
 end
 
-if SystemState.idle_time > 600
+if ARGV[0].to_s == "plist"
+  puts Launchctl.plist
+elsif SystemState.idle_time > 600
   Application.quit("Adium") 
   Application.quit("Tweetbot") 
   Application.quit("Billings")
