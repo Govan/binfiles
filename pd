@@ -9,4 +9,6 @@ device_name = ARGV.shift
 command = ARGV.join(" ")[0..50]
 
 system command 
-system "prowl '#{command}' -t #{device_name} -a 'Task Complete'"
+output_code = $?.to_i
+outcome = output_code.zero? ? "Task Complete" : "Task Failed [#{output_code}]"
+system "prowl '#{command}' -t #{device_name} -a '#{outcome}'"
