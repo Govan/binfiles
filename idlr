@@ -50,7 +50,7 @@ module Application
   end
 end
 
-if SystemState.idle_time > 600
+if SystemState.idle_time > 300
   Application.quit("Adium") 
   Application.quit("Tweetbot") 
   Application.quit("Billings")
