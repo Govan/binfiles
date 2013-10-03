@@ -1,0 +1,7 @@
+#!/bin/bash
+
+rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Audiobooks/* /Volumes/Meeja/Backup/Audio
+rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Podcasts/* /Volumes/Meeja/Backup/Podcasts
+rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Books/* /Volumes/Meeja/Backup/Books
+rsync -rv --size-only /Users/leftbrained/Pictures/iPhoto\ Library.photolibrary/Masters /Volumes/Meeja/Backup/Pictures
+
