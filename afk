@@ -11,7 +11,7 @@ module Launchctl
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>uk.co.leftbrained.idlr</string>
+    <string>uk.co.leftbrained.afk</string>
     <key>OnDemand</key>
     <true/>
     <key>RunAtLoad</key>
@@ -52,7 +52,7 @@ end
 
 if ARGV[0].to_s == "plist"
   puts Launchctl.plist
-elsif SystemState.idle_time > 300
+elsif SystemState.idle_time > 10
   Application.quit("Adium") 
   Application.quit("Tweetbot") 
   Application.quit("Billings")
