@@ -52,7 +52,7 @@ end
 
 if ARGV[0].to_s == "plist"
   puts Launchctl.plist
-elsif SystemState.idle_time > 10
+elsif SystemState.idle_time > 300
   Application.quit("Adium") 
   Application.quit("Tweetbot") 
   Application.quit("Billings")
