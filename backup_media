@@ -4,4 +4,5 @@ rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Audiobooks/*
 rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Podcasts/* /Volumes/MeejaBackup/S3/Podcasts
 #rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Books/* /Volumes/Meeja/Backup/Books
 rsync -rv --size-only /Users/leftbrained/Pictures/iPhoto\ Library.photolibrary/Masters /Volumes/MeejaBackup/NotS3/Pictures
+rsync -rv --size-only /Users/leftbrained/Library/Containers/com.apple.BKAgentService/Data/Documents/iBooks/Books/* /Volumes/MeejaBackup/S3/Books
 
