@@ -1,0 +1,148 @@
+#!/bin/bash
+
+OIFS="$IFS"
+IFS=$'\n'
+
+NONCOMMITTAL_SETTINGS="$HOME/.noncommittal"
+NONCOMMITTAL_GRACE_PERIOD="+60m"
+
+main() {
+  local arg=$1;shift
+  if [ -n "$arg" ] ; then
+    usage
+  else
+    setup_if_first_run
+    read_repository_list | while read -r repository ; do
+      alert_if_repository_is_dirty $repository
+      alert_if_repository_needs_push $repository
+#      alert_if_repository_needs_pull $repository
+    done 
+fi
+}
+
+
+setup_if_first_run() {
+  if [ ! -d $NONCOMMITTAL_SETTINGS ] ; then
+    mkdir "$NONCOMMITTAL_SETTINGS"
+    touch "$NONCOMMITTAL_SETTINGS/repositories"
+    echo "Give absolute paths to repositories you'd like to watch, one per line. Finish by giving an empty line";
+    while true
+    do
+      read repository;
+      case $repository in
+        "") break;;
+        * ) echo $repository >> "$NONCOMMITTAL_SETTINGS/repositories";;
+        esac
+    done
+
+    cp ./support/git_logo.png  "$NONCOMMITTAL_SETTINGS/logo.png"
+  fi
+}
+
+read_repository_list() {
+  cat "$NONCOMMITTAL_SETTINGS/repositories"
+}
+
+repository_has_changes() {
+  local repository=$1;shift
+  local changes=0
+  cd "$repository"; 
+  for dirty_file in $(git status -s | sed 's/^.. //')
+  do 
+    if [[ -n $(find "$dirty_file" -mtime $NONCOMMITTAL_GRACE_PERIOD -print)  ]] ; then
+      (( changes += 1 ))
+    fi
+  done
+  echo $changes;
+}
+
+repository_needs_push() {
+  local repository=$1;shift
+  cd $repository;
+  if git status | grep --quiet "branch is ahead"; then
+    return 0;
+  fi
+  return 1;
+}
+
+repository_needs_pull() {
+  local repository=$1;shift
+  cd $repository;
+  if git status | grep --quiet "branch is ahead"; then
+    return 0;
+  fi
+  return 1;
+}
+
+
+alert_if_repository_is_dirty() {
+  local repository=$1;shift
+  local repo_name=$(basename $repository)
+  local message="";
+  local changes=$(repository_has_changes $repository)
+  if [[ $changes -gt 0 ]]; then
+    if [[ $changes -eq 1 ]]; then
+      message="$repository has 1 change that hasn't been committed." 
+    else
+      message="$repository has $changes changes that haven't been committed."
+    fi
+    display_notification "$repo_name has uncommited changes!" $message
+  fi
+}
+
+
+alert_if_repository_needs_push() {
+  local repository=$1;shift
+  local repo_name=$(basename $repository)
+  if repository_needs_push $repository ; then 
+    display_notification "$repo_name has unpushed commits" \
+                         "$repository is out of sync. You really ought to push those commits to a remote. What if your computer explodes?"
+  fi
+}
+
+alert_if_repository_needs_pull() {
+  local repository=$1;shift
+  if repository_needs_pull $repository ; then 
+    display_notification "You have unpulled commits!" "$(basename $repository) needs to pull"
+  fi
+}
+
+display_notification() {
+  local title=$1;shift
+  local message=$1;shift
+  local logo="$NONCOMMITTAL_SETTINGS/logo.png"
+
+  export NONCOMMITTAL_NOTIFICATION_TITLE=$title
+  export NONCOMMITTAL_NOTIFICATION_MESSAGE=$message
+  growlnotify -a noncommittal \
+              --image $logo \
+              -s \
+              -t $title \
+              -m $message 
+
+}
+
+usage() {
+    cat <<- EOF
+    usage: noncommittal options
+    
+    Read a list of targets from ~/.noncommittal/repositories. Check each repository for
+
+    a) Uncommited changes
+    b) Unpushed commits
+    c) Remote commits
+
+    and display a suitable notification for any results via growl
+
+    OPTIONS:
+       -h --help                show this help
+    
+    Todo:
+      Detect if growl is installed
+      Show time of last update on dirty repositories
+      Show difference between local/remote repositories
+EOF
+}
+
+
+main $1
