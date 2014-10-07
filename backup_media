@@ -1,6 +1,0 @@
-#!/bin/bash
-
-rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Audiobooks/* /Volumes/Meeja/S3/Audio
-rsync -rv --size-only /Users/leftbrained/Music/iTunes/iTunes\ Media/Podcasts/* /Volumes/Meeja/S3/Podcasts
-rsync -rv --size-only /Users/leftbrained/Library/Containers/com.apple.BKAgentService/Data/Documents/iBooks/Books/* /Volumes/Meeja/S3/Books
-
