@@ -49,8 +49,15 @@ repository_has_changes() {
   cd "$repository"; 
   for dirty_file in $(git status -s | sed 's/^.. //')
   do 
-    if [[ -n $(find "$dirty_file" -mtime $COMMITMENT_ISSUES_GRACE_PERIOD -print)  ]] ; then
+
+    if [ ! -f "$dirty_file" ] ; then
       (( changes += 1 ))
+    else
+      is_old_and_dirty=$(find "$dirty_file" -mtime $COMMITMENT_ISSUES_GRACE_PERIOD);
+      if [ -n "$is_old_and_dirty"  ] ; then
+        echo "x $is_old_and_dirty" >> ~/Desktop/foobar
+        (( changes += 1 ))
+      fi
     fi
   done
   echo $changes;
@@ -80,8 +87,8 @@ alert_if_repository_is_dirty() {
   local repo_name=$(basename $repository)
   local message="";
   local changes=$(repository_has_changes $repository)
-  if [[ $changes -gt 0 ]]; then
-    if [[ $changes -eq 1 ]]; then
+  if [ $changes -gt 0 ] ; then
+    if [ $changes -eq 1 ] ; then
       message="$repository has 1 change that hasn't been committed." 
     else
       message="$repository has $changes changes that haven't been committed."
