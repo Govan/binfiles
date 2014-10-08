@@ -3,8 +3,8 @@
 OIFS="$IFS"
 IFS=$'\n'
 
-NONCOMMITTAL_SETTINGS="$HOME/.noncommittal"
-NONCOMMITTAL_GRACE_PERIOD="+60m"
+COMMITMENT_ISSUES_SETTINGS="$HOME/.commitment-issues"
+COMMITMENT_ISSUES_GRACE_PERIOD="+60m"
 
 main() {
   local arg=$1;shift
@@ -22,25 +22,25 @@ fi
 
 
 setup_if_first_run() {
-  if [ ! -d $NONCOMMITTAL_SETTINGS ] ; then
-    mkdir "$NONCOMMITTAL_SETTINGS"
-    touch "$NONCOMMITTAL_SETTINGS/repositories"
+  if [ ! -d $COMMITMENT_ISSUES_SETTINGS ] ; then
+    mkdir "$COMMITMENT_ISSUES_SETTINGS"
+    touch "$COMMITMENT_ISSUES_SETTINGS/repositories"
     echo "Give absolute paths to repositories you'd like to watch, one per line. Finish by giving an empty line";
     while true
     do
       read repository;
       case $repository in
         "") break;;
-        * ) echo $repository >> "$NONCOMMITTAL_SETTINGS/repositories";;
+        * ) echo $repository >> "$COMMITMENT_ISSUES_SETTINGS/repositories";;
         esac
     done
 
-    cp ./support/git_logo.png  "$NONCOMMITTAL_SETTINGS/logo.png"
+    cp ./support/git_logo.png  "$COMMITMENT_ISSUES_SETTINGS/logo.png"
   fi
 }
 
 read_repository_list() {
-  cat "$NONCOMMITTAL_SETTINGS/repositories"
+  cat "$COMMITMENT_ISSUES_SETTINGS/repositories"
 }
 
 repository_has_changes() {
@@ -49,7 +49,7 @@ repository_has_changes() {
   cd "$repository"; 
   for dirty_file in $(git status -s | sed 's/^.. //')
   do 
-    if [[ -n $(find "$dirty_file" -mtime $NONCOMMITTAL_GRACE_PERIOD -print)  ]] ; then
+    if [[ -n $(find "$dirty_file" -mtime $COMMITMENT_ISSUES_GRACE_PERIOD -print)  ]] ; then
       (( changes += 1 ))
     fi
   done
@@ -110,11 +110,11 @@ alert_if_repository_needs_pull() {
 display_notification() {
   local title=$1;shift
   local message=$1;shift
-  local logo="$NONCOMMITTAL_SETTINGS/logo.png"
+  local logo="$COMMITMENT_ISSUES_SETTINGS/logo.png"
 
-  export NONCOMMITTAL_NOTIFICATION_TITLE=$title
-  export NONCOMMITTAL_NOTIFICATION_MESSAGE=$message
-  growlnotify -a noncommittal \
+  export COMMITMENT_ISSUES_NOTIFICATION_TITLE=$title
+  export COMMITMENT_ISSUES_NOTIFICATION_MESSAGE=$message
+  /usr/local/bin/growlnotify -a commitment-issues \
               --image $logo \
               -s \
               -t $title \
@@ -124,9 +124,9 @@ display_notification() {
 
 usage() {
     cat <<- EOF
-    usage: noncommittal options
+    usage: commitment-issues options
     
-    Read a list of targets from ~/.noncommittal/repositories. Check each repository for
+    Read a list of targets from ~/.commitment-issues/repositories. Check each repository for
 
     a) Uncommited changes
     b) Unpushed commits
