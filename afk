@@ -48,14 +48,26 @@ module Application
   def self.quit(application)
     `osascript -e 'tell application "#{application}" to quit'`
   end
+
+  def self.mute
+    `osascript -e 'set volume with output muted'`
+  end
 end
 
 if ARGV[0].to_s == "plist"
   puts Launchctl.plist
-elsif SystemState.idle_time > 300
+end
+
+if SystemState.idle_time > (60 * 30)
+  Application.quit("HipChat") 
+end
+
+if SystemState.idle_time > (60 * 5)
   Application.quit("Adium") 
-  Application.quit("Tweetbot") 
-  Application.quit("Billings")
-  Application.quit("LittleSnapper")
-  Application.quit("iTunes") unless SystemState.screensaver_suppressed?
+  unless SystemState.screensaver_suppressed?
+    Application.mute
+    Application.quit("Spotify") 
+    Application.quit("WhiteNoise") 
+    Application.quit("iTunes")
+  end
 end
