@@ -59,7 +59,7 @@ if ARGV[0].to_s == "plist"
 end
 
 if SystemState.idle_time > (60 * 30)
-  Application.quit("HipChat") 
+  Application.quit("Slack") 
 end
 
 if SystemState.idle_time > (60 * 5)
